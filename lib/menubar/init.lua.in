@@ -260,7 +260,7 @@ function menubar.show(scr)
 
     -- Set position and size
     scr = scr or capi.mouse.screen or 1
-    local scrgeom = capi.screen[scr].workarea
+    local scrgeom = scr.workarea
     local geometry = menubar.geometry
     instance.wibox:geometry({x = geometry.x or scrgeom.x,
                              y = geometry.y or scrgeom.y,

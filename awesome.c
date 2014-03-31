@@ -473,9 +473,6 @@ main(int argc, char **argv)
     /* init atom cache */
     atoms_init(globalconf.connection);
 
-    /* init screens information */
-    screen_scan();
-
     xutil_lock_mask_get(globalconf.connection, xmapping_cookie,
                         globalconf.keysyms, &globalconf.numlockmask,
                         &globalconf.shiftlockmask, &globalconf.capslockmask,
@@ -527,6 +524,9 @@ main(int argc, char **argv)
     p_delete(&confpath);
 
     xdgWipeHandle(&xdg);
+
+    /* init screens information */
+    screen_scan();
 
     /* scan existing windows */
     scan(tree_c);

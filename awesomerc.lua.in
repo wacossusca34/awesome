@@ -71,19 +71,19 @@ awful.layout.layouts = {
 
 -- {{{ Wallpaper
 if beautiful.wallpaper then
-    for s = 1, screen.count() do
+    screen.connect_signal("connected", function(s)
         gears.wallpaper.maximized(beautiful.wallpaper, s, true)
-    end
+    end)
 end
 -- }}}
 
 -- {{{ Tags
 -- Define a tag table which hold all screen tags.
-tags = {}
-for s = 1, screen.count() do
+tags = setmetatable({}, { __mode = "k" })
+screen.connect_signal("connected", function(s)
     -- Each screen has its own tag table.
     tags[s] = awful.tag({ 1, 2, 3, 4, 5, 6, 7, 8, 9 }, s, awful.layout.layouts[1])
-end
+end)
 -- }}}
 
 -- {{{ Menu
@@ -112,10 +112,10 @@ menubar.utils.terminal = terminal -- Set the terminal for applications that requ
 mytextclock = awful.widget.textclock()
 
 -- Create a wibox for each screen and add it
-mywibox = {}
-mypromptbox = {}
-mylayoutbox = {}
-mytaglist = {}
+mywibox = setmetatable({}, { __mode = "k" })
+mypromptbox = setmetatable({}, { __mode = "k" })
+mylayoutbox = setmetatable({}, { __mode = "k" })
+mytaglist = setmetatable({}, { __mode = "k" })
 mytaglist.buttons = awful.util.table.join(
                     awful.button({ }, 1, awful.tag.viewonly),
                     awful.button({ modkey }, 1, awful.client.movetotag),
@@ -124,7 +124,7 @@ mytaglist.buttons = awful.util.table.join(
                     awful.button({ }, 4, function(t) awful.tag.viewnext(awful.tag.getscreen(t)) end),
                     awful.button({ }, 5, function(t) awful.tag.viewprev(awful.tag.getscreen(t)) end)
                     )
-mytasklist = {}
+mytasklist = setmetatable({}, { __mode = "k" })
 mytasklist.buttons = awful.util.table.join(
                      awful.button({ }, 1, function (c)
                                               if c == client.focus then
@@ -161,7 +161,7 @@ mytasklist.buttons = awful.util.table.join(
                                               if client.focus then client.focus:raise() end
                                           end))
 
-for s = 1, screen.count() do
+screen.connect_signal("connected", function(s)
     -- Create a promptbox for each screen
     mypromptbox[s] = awful.widget.prompt()
     -- Create an imagebox widget which will contains an icon indicating which layout we're using.
@@ -200,7 +200,7 @@ for s = 1, screen.count() do
     layout:set_right(right_layout)
 
     mywibox[s]:set_widget(layout)
-end
+end)
 -- }}}
 
 -- {{{ Mouse bindings

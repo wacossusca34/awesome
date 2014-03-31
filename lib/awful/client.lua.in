@@ -303,7 +303,7 @@ function client.focus.global_bydirection(dir, c)
             for i,cl in ipairs(cltbl) do
                 geomtbl[i] = cl:geometry()
             end
-            local target = util.get_rectangle_in_direction(dir, geomtbl, capi.screen[scr].geometry)
+            local target = util.get_rectangle_in_direction(dir, geomtbl, scr.geometry)
 
             if target then
                 capi.client.focus = cltbl[target]
@@ -492,16 +492,16 @@ end
 
 --- Move a client to a screen. Default is next screen, cycling.
 -- @param c The client to move.
--- @param s The screen number, default to current + 1.
+-- @param s The screen, default to the next screen.
 function client.movetoscreen(c, s)
     screen = screen or require("awful.screen")
     local sel = c or capi.client.focus
     if sel then
-        local sc = capi.screen.count()
+        local screens = capi.screen.screens()
+        local k = util.hasitem(screens, sel)
         if not s then
-            s = sel.screen + 1
+            s = screens[util.cycle(#screens, k + 1)]
         end
-        if s > sc then s = 1 elseif s < 1 then s = sc end
         sel.screen = s
         screen.focus(s)
     end

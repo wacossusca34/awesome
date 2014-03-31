@@ -7,25 +7,26 @@
 local cairo = require("lgi").cairo
 local color = require("gears.color")
 local surface = require("gears.surface")
+local capi = {
+    screen = screen
+}
 
 -- gears.wallpaper
 local wallpaper = { mt = {} }
 
 -- The size of the root window
 local root_geom
-do
-    local geom = screen[1].geometry
+local function update_root_geom()
     root_geom = {
-        x = 0, y = 0,
-        width = geom.x + geom.width,
-        height = geom.y + geom.height
+        x = 0, y = 0, width = 0, height = 0
     }
-    for s = 1, screen.count() do
-        local g = screen[s].geometry
+    for _, s in ipairs(screen.screens()) do
+        local g = s.geometry
         root_geom.width = math.max(root_geom.width, g.x + g.width)
         root_geom.height = math.max(root_geom.height, g.y + g.height)
     end
 end
+screen.connect_signal("connected", update_root_geom)
 
 --- Prepare the needed state for setting a wallpaper
 -- @param s The screen to set the wallpaper on or nil for all screens
@@ -33,7 +34,7 @@ end
 --         that should be used for setting the wallpaper and a cairo context
 --         for drawing to this surface
 local function prepare_wallpaper(s)
-    local geom = s and screen[s].geometry or root_geom
+    local geom = s and s.geometry or root_geom
     local img = surface(root.wallpaper())
 
     if not img then

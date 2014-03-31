@@ -46,7 +46,7 @@ screen_output_wipe(screen_output_t *output)
 
 ARRAY_FUNCS(screen_output_t, screen_output, screen_output_wipe)
 
-static lua_class_t screen_class;
+lua_class_t screen_class;
 LUA_OBJECT_FUNCS(screen_class, screen_t, screen)
 
 /** Collect a screen. */
@@ -54,20 +54,6 @@ static void
 screen_wipe(screen_t *s)
 {
     screen_output_array_wipe(&s->outputs);
-}
-
-/** Get a screen argument from the lua stack */
-screen_t *
-luaA_checkscreen(lua_State *L, int sidx)
-{
-    if (lua_isnumber(L, sidx))
-    {
-        int screen = lua_tointeger(L, sidx);
-        if(screen < 1 || screen > globalconf.screens.len)
-            luaL_error(L, "invalid screen number: %d", screen);
-        return globalconf.screens.tab[screen - 1];
-    } else
-        return luaA_checkudata(L, sidx, &screen_class);
 }
 
 static inline area_t
@@ -102,8 +88,13 @@ screen_add(lua_State *L, int sidx)
                 return;
             }
 
-    luaA_object_ref(L, sidx);
+    lua_pushvalue(L, sidx);
+    luaA_object_ref(L, -1);
     screen_array_append(&globalconf.screens, new_screen);
+
+    lua_pushvalue(L, sidx);
+    luaA_class_emit_signal(L, &screen_class, "connected", 1);
+    lua_remove(L, sidx);
 }
 
 static bool
@@ -427,15 +418,14 @@ screen_client_moveto(client_t *c, screen_t *new_screen, bool doresize)
 static int
 luaA_screen_module_index(lua_State *L)
 {
-    const char *name;
+    const char *name = luaL_checkstring(L, 2);
 
-    if((name = lua_tostring(L, 2)))
-        foreach(screen, globalconf.screens)
-            foreach(output, (*screen)->outputs)
-                if(A_STREQ(output->name, name))
-                    return luaA_object_push(L, screen);
+    foreach(screen, globalconf.screens)
+        foreach(output, (*screen)->outputs)
+            if(A_STREQ(output->name, name))
+                return luaA_object_push(L, screen);
 
-    return luaA_object_push(L, luaA_checkscreen(L, 2));
+    return 0;
 }
 
 LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, luaA_pusharea)
@@ -466,17 +456,17 @@ luaA_screen_get_workarea(lua_State *L, screen_t *s)
     return 1;
 }
 
-/** Get the screen count.
- * \param L The Lua VM state.
- * \return The number of elements pushed on stack.
- *
- * \luastack
- * \lreturn The screen count, at least 1.
- */
 static int
-luaA_screen_count(lua_State *L)
+luaA_screen_module_screens(lua_State *L)
 {
-    lua_pushnumber(L, globalconf.screens.len);
+    int i = 1;
+
+    lua_newtable(L);
+    foreach(s, globalconf.screens)
+    {
+        luaA_object_push(L, *s);
+        lua_rawseti(L, -2, i++);
+    }
     return 1;
 }
 
@@ -486,7 +476,7 @@ screen_class_setup(lua_State *L)
     static const struct luaL_Reg screen_methods[] =
     {
         LUA_CLASS_METHODS(screen)
-        { "count", luaA_screen_count },
+        { "screens", luaA_screen_module_screens },
         { "__index", luaA_screen_module_index },
         { "__newindex", luaA_default_newindex },
         { NULL, NULL }
@@ -518,6 +508,7 @@ screen_class_setup(lua_State *L)
                             (lua_class_propfunc_t) luaA_screen_get_workarea,
                             NULL);
     signal_add(&screen_class.signals, "property::workarea");
+    signal_add(&screen_class.signals, "connected"); // TODO: rename to attached?
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

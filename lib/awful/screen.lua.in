@@ -24,22 +24,24 @@ local data = {}
 data.padding = {}
 
 ---
--- Return Xinerama screen number corresponding to the given (pixel) coordinates.
--- The number returned can be used as an index into the global
--- `screen` table/object.
+-- Return screen object corresponding to the given (pixel) coordinates.
 -- @param x The x coordinate
 -- @param y The y coordinate
--- @param default Optional default return value. If unspecified, 1 is returned.
+-- @param default Optional default return value. If unspecified, some screen is returned.
 function screen.getbycoord(x, y, default)
-    for i = 1, capi.screen:count() do
-        local geometry = capi.screen[i].geometry
+    for _, s in pairs(capi.screen.screens()) do
+        local geometry = s.geometry
         if((x < 0 or (x >= geometry.x and x < geometry.x + geometry.width))
            and (y < 0 or (y >= geometry.y and y < geometry.y + geometry.height))) then
-            return i
+            return s
         end
     end
     -- No caller expects a nil result here, so just make something up
-    if default == nil then return 1 end
+    if default == nil then
+        -- FIXME: Primary screen?
+        local _, s = next(capi.screen.screens())
+        return s
+    end
     return default
 end
 
@@ -47,18 +49,17 @@ end
 -- @param screen Screen number.
 function screen.focus(_screen)
     client = client or require("awful.client")
-    if _screen > capi.screen.count() then _screen = capi.mouse.screen end
 
     -- screen and pos for current screen
     local s = capi.mouse.screen
     local pos = capi.mouse.coords()
 
     -- keep relative mouse position on the new screen
-    local relx = (pos.x - capi.screen[s].geometry.x) / capi.screen[s].geometry.width
-    local rely = (pos.y - capi.screen[s].geometry.y) / capi.screen[s].geometry.height
+    local relx = (pos.x - s.geometry.x) / s.geometry.width
+    local rely = (pos.y - s.geometry.y) / s.geometry.height
 
-    pos.x = capi.screen[_screen].geometry.x + relx * capi.screen[_screen].geometry.width
-    pos.y = capi.screen[_screen].geometry.y + rely * capi.screen[_screen].geometry.height
+    pos.x = _screen.geometry.x + relx * _screen.geometry.width
+    pos.y = _screen.geometry.y + rely * _screen.geometry.height
 
    -- move cursor without triggering signals mouse::enter and mouse::leave
     capi.mouse.coords(pos, true)
@@ -74,10 +75,10 @@ function screen.focus_bydirection(dir, _screen)
     local sel = _screen or capi.mouse.screen
     if sel then
         local geomtbl = {}
-        for s = 1, capi.screen.count() do
-            geomtbl[s] = capi.screen[s].geometry
+        for _, s in pairs(capi.screen.screens()) do
+            geomtbl[s] = s.geometry
         end
-        local target = util.get_rectangle_in_direction(dir, geomtbl, capi.screen[sel].geometry)
+        local target = util.get_rectangle_in_direction(dir, geomtbl, sel.geometry)
         if target then
             return screen.focus(target)
         end
@@ -89,7 +90,8 @@ end
 -- @param i Value to add to the current focused screen index. 1 will focus next
 -- screen, -1 would focus the previous one.
 function screen.focus_relative(i)
-    return screen.focus(util.cycle(capi.screen.count(), capi.mouse.screen + i))
+    local screens = capi.screen.screens();
+    return screen.focus(screens[util.cycle(#screens, util.table.hasitem(capi.mouse.screen) + 1)])
 end
 
 --- Get or set the screen padding.

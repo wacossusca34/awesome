@@ -109,7 +109,7 @@ function placement.no_offscreen(c)
     local geometry = c:geometry()
     local screen   = c.screen or a_screen.getbycoord(geometry.x, geometry.y)
     local border   = c.border_width
-    local screen_geometry = capi.screen[screen].workarea
+    local screen_geometry = screen.workarea
 
     if geometry.x + geometry.width + 2*border > screen_geometry.x + screen_geometry.width then
         geometry.x = screen_geometry.x + screen_geometry.width - geometry.width - 2*border
@@ -133,7 +133,7 @@ function placement.no_overlap(c)
     local screen   = c.screen or a_screen.getbycoord(geometry.x, geometry.y)
     local cls = client.visible(screen)
     local curlay = layout.get()
-    local areas = { capi.screen[screen].workarea }
+    local areas = { screen.workarea }
     for i, cl in pairs(cls) do
         if cl ~= c and cl.type ~= "desktop" and (client.floating.get(cl) or curlay == layout.suit.floating) then
             areas = area_remove(areas, cl:geometry())
@@ -201,7 +201,7 @@ function placement.centered(c, p)
     if p then
         s_geometry = p:geometry()
     else
-        s_geometry = capi.screen[screen].geometry
+        s_geometry = screen.geometry
     end
     return c:geometry({ x = s_geometry.x + (s_geometry.width - c_geometry.width) / 2,
                         y = s_geometry.y + (s_geometry.height - c_geometry.height) / 2 })
@@ -219,7 +219,7 @@ function placement.center_horizontal(c, p)
     if p then
         s_geometry = p:geometry()
     else
-        s_geometry = capi.screen[screen].geometry
+        s_geometry = screen.geometry
     end
     return c:geometry({ x = s_geometry.x + (s_geometry.width - c_geometry.width) / 2 })
 end
@@ -236,7 +236,7 @@ function placement.center_vertical(c, p)
     if p then
         s_geometry = p:geometry()
     else
-        s_geometry = capi.screen[screen].geometry
+        s_geometry = screen.geometry
     end
     return c:geometry({ y = s_geometry.y + (s_geometry.height - c_geometry.height) / 2 })
 end

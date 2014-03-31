@@ -109,8 +109,8 @@ function mouse.client.snap(c, snap, x, y, fixed_x, fixed_y)
     geom.x = x or geom.x
     geom.y = y or geom.y
 
-    geom, edge = snap_inside(geom, capi.screen[c.screen].geometry, snap)
-    geom = snap_inside(geom, capi.screen[c.screen].workarea, snap)
+    geom, edge = snap_inside(geom, c.screen.geometry, snap)
+    geom = snap_inside(geom, c.screen.workarea, snap)
 
     -- Allow certain windows to snap to the edge of the workarea.
     -- Only allow docking to workarea for consistency/to avoid problems.
@@ -243,7 +243,7 @@ function mouse.client.dragtotag.border(c)
                                 for _, v in ipairs(_mouse.buttons) do
                                     if v then button_down = true end
                                 end
-                                local wa = capi.screen[c.screen].workarea
+                                local wa = c.screen.workarea
                                 if _mouse.x >= wa.x + wa.width then
                                     capi.mouse.coords({ x = wa.x + wa.width - 1 })
                                 elseif _mouse.x <= wa.x then
@@ -290,7 +290,7 @@ function mouse.wibox.move(w)
             w.x = capi.mouse.coords().x + offset.x
             w.y = capi.mouse.coords().y + offset.y
         else
-            local wa = capi.screen[capi.mouse.screen].workarea
+            local wa = capi.mouse.screen.workarea
 
             if capi.mouse.coords()["y"] > wa.y + wa.height - 10 then
                 awibox.set_position(w, "bottom", w.screen)
@@ -363,7 +363,7 @@ local function client_resize_magnifier(c, corner)
     local corner, x, y = mouse.client.corner(c, corner)
     capi.mouse.coords({ x = x, y = y })
 
-    local wa = capi.screen[c.screen].workarea
+    local wa = c.screen.workarea
     local center_x = wa.x + wa.width / 2
     local center_y = wa.y + wa.height / 2
     local maxdist_pow = (wa.width^2 + wa.height^2) / 4
@@ -386,7 +386,7 @@ local function client_resize_magnifier(c, corner)
 end
 
 local function client_resize_tiled(c, lay)
-    local wa = capi.screen[c.screen].workarea
+    local wa = c.screen.workarea
     local mwfact = tag.getmwfact()
     local cursor
     local g = c:geometry()

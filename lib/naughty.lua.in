@@ -80,7 +80,7 @@ naughty.config.presets = {
 naughty.config.defaults = {
     timeout = 5,
     text = "",
-    screen = 1,
+    screen = nil,
     ontop = true,
     margin = "5",
     border_width = "1",
@@ -120,15 +120,17 @@ local suspended = false
 -- @field width Popup width
 -- @field die Function to be executed on timeout
 -- @field id Unique notification id based on a counter
-naughty.notifications = { suspended = { } }
-for s = 1, capi.screen.count() do
-    naughty.notifications[s] = {
-        top_left = {},
-        top_right = {},
-        bottom_left = {},
-        bottom_right = {},
-    }
-end
+naughty.notifications = setmetatable({ suspended = { } }, {
+    __index = function(t, k)
+        local res = {
+            top_left = {},
+            top_right = {},
+            bottom_left = {},
+            bottom_right = {},
+        }
+        t[k] = res
+        return res
+    end })
 
 --- Suspend notifications
 function naughty.suspend()
@@ -161,7 +163,7 @@ end
 -- @param width Popup width (optional)
 -- @return Absolute position and index in { x = X, y = Y, idx = I } table
 local function get_offset(screen, position, idx, width, height)
-    local ws = capi.screen[screen].workarea
+    local ws = screen.workarea
     local v = {}
     local idx = idx or #naughty.notifications[screen][position] + 1
     local width = width or naughty.notifications[screen][position][idx].width
@@ -238,7 +240,7 @@ end
 -- @return notification object if it was found, nil otherwise
 local function getById(id)
     -- iterate the notifications to get the notfications with the correct ID
-    for s = 1, capi.screen.count() do
+    for s, positions in pairs(naughty.notifications) do
         for p,pos in pairs(naughty.notifications[s]) do
             for i,notification in pairs(naughty.notifications[s][p]) do
                 if notification.id == id then
@@ -256,7 +258,7 @@ end
 --   Set 0 for no timeout. Default: 5
 -- @param hover_timeout Delay in seconds after which hovered popup disappears.
 --   Default: nil
--- @param screen Target screen for the notification. Default: 1
+-- @param screen Target screen for the notification.
 -- @param position Corner of the workarea displaying the popups.
 --   Values: "top_right" (default), "top_left", "bottom_left", "bottom_right".
 -- @param ontop Boolean forcing popups to display on top. Default: true
@@ -293,7 +295,7 @@ function naughty.notify(args)
     local icon_size = args.icon_size or preset.icon_size
     local text = args.text or preset.text
     local title = args.title or preset.title
-    local screen = args.screen or preset.screen
+    local screen = args.screen or preset.screen or (function() local a, s = next(capi.screen.screens()) return s end)()
     local ontop = args.ontop or preset.ontop
     local width = args.width or preset.width
     local height = args.height or preset.height
@@ -304,6 +306,12 @@ function naughty.notify(args)
     local position = args.position or preset.position
     local escape_pattern = "[<>&]"
     local escape_subs = { ['<'] = "&lt;", ['>'] = "&gt;", ['&'] = "&amp;" }
+
+    -- FIXME this is totally not ok
+    if not screen then
+        print("Skipped notification since we have no screens, text:", text)
+        return
+    end
 
     -- beautiful
     local beautiful = bt.get()
@@ -462,7 +470,7 @@ function naughty.notify(args)
     end
 
     -- crop to workarea size if too big
-    local workarea = capi.screen[screen].workarea
+    local workarea = screen.workarea
     if width > workarea.width - 2 * (border_width or 0) - 2 * (naughty.config.padding or 0) then
         width = workarea.width - 2 * (border_width or 0) - 2 * (naughty.config.padding or 0)
     end

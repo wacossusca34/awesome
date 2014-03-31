@@ -27,6 +27,8 @@
 #include "common/array.h"
 #include "common/luaclass.h"
 
+extern lua_class_t screen_class;
+
 typedef struct screen_output_t screen_output_t;
 ARRAY_TYPE(screen_output_t, screen_output)
 
@@ -45,8 +47,6 @@ void screen_scan(void);
 screen_t *screen_getbycoord(int, int);
 area_t display_area_get(void);
 void screen_client_moveto(client_t *, screen_t *, bool);
-
-screen_t *luaA_checkscreen(lua_State *, int);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

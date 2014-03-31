@@ -135,7 +135,7 @@ luaA_mouse_newindex(lua_State *L)
     if (A_STRNEQ(attr, "screen"))
         return luaA_default_newindex(L);
 
-    screen = luaA_checkscreen(L, 3);
+    screen = luaA_checkudata(L, 3, &screen_class);
     mouse_warp_pointer(globalconf.screen->root, screen->geometry.x, screen->geometry.y);
     return 0;
 }

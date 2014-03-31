@@ -3,9 +3,8 @@
 -- @copyright 2008-2009 Julien Danjou
 module("screen")
 
---- Screen is a table where indexes are screen number. You can use screen[1]
--- to get access to the first screen, etc. Alternatively, if RANDR information
--- is available, you can use output names for finding screen objects.
+--- If RANDR information is available, you can use output names as indexes for
+-- finding screen objects.
 -- Each screen has a set of properties.
 -- @field geometry The screen coordinates. Immutable.
 -- @field workarea The screen workarea.
@@ -15,9 +14,9 @@ module("screen")
 -- @class table
 -- @name screen
 
---- Get the number of screen.
--- @return The screen count, at least 1.
--- @name count
+--- Get a table of all screens.
+-- @return Table with screens
+-- @name screens
 -- @class function
 
 --- Add a signal to a screen.

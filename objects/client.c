@@ -1251,7 +1251,7 @@ luaA_client_get(lua_State *L)
     screen_t *screen = NULL;
 
     if(!lua_isnoneornil(L, 1))
-        screen = luaA_checkscreen(L, 1);
+        screen = luaA_checkudata(L, 1, &screen_class);
 
     lua_newtable(L);
     foreach(c, globalconf.clients)
@@ -1675,7 +1675,7 @@ luaA_client_geometry(lua_State *L)
 static int
 luaA_client_set_screen(lua_State *L, client_t *c)
 {
-    screen_client_moveto(c, luaA_checkscreen(L, -1), true);
+    screen_client_moveto(c, luaA_checkudata(L, -1, &screen_class), true);
     return 0;
 }
 

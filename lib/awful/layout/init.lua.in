@@ -97,20 +97,20 @@ function layout.arrange(screen)
     if arrange_lock then return end
     arrange_lock = true
     local p = {}
-    p.workarea = capi.screen[screen].workarea
+    p.workarea = screen.workarea
     -- Handle padding
-    local padding = ascreen.padding(capi.screen[screen])
+    local padding = ascreen.padding(screen)
     if padding then
         p.workarea.x = p.workarea.x + (padding.left or 0)
         p.workarea.y = p.workarea.y + (padding.top or 0)
         p.workarea.width = p.workarea.width - ((padding.left or 0 ) + (padding.right or 0))
         p.workarea.height = p.workarea.height - ((padding.top or 0) + (padding.bottom or 0))
     end
-    p.geometry = capi.screen[screen].geometry
+    p.geometry = screen.geometry
     p.clients = client.tiled(screen)
     p.screen = screen
     layout.get(screen).arrange(p)
-    capi.screen[screen]:emit_signal("arrange")
+    screen:emit_signal("arrange")
     arrange_lock = false
 end
 
@@ -138,7 +138,8 @@ capi.client.connect_signal("property::geometry", arrange_prop)
 -- If prop is screen, we do not know what was the previous screen, so
 -- let's arrange all screens :-(
 capi.client.connect_signal("property::screen", function(c)
-    for screen = 1, capi.screen.count() do layout.arrange(screen) end end)
+    for _, screen in pairs(capi.screen.screens()) do layout.arrange(screen) end
+end)
 
 local function arrange_on_tagged(c, tag)
     if not tag.screen then return end
@@ -153,7 +154,7 @@ local function arrange_tag(t)
 end
 
 capi.screen.add_signal("arrange")
-for s = 1, capi.screen.count() do
+capi.screen.connect_signal("connected", function(s)
     tag.attached_connect_signal(s, "property::mwfact", arrange_tag)
     tag.attached_connect_signal(s, "property::nmaster", arrange_tag)
     tag.attached_connect_signal(s, "property::ncol", arrange_tag)
@@ -162,17 +163,17 @@ for s = 1, capi.screen.count() do
     tag.attached_connect_signal(s, "property::selected", arrange_tag)
     tag.attached_connect_signal(s, "property::activated", arrange_tag)
     tag.attached_connect_signal(s, "tagged", arrange_tag)
-    capi.screen[s]:connect_signal("property::workarea", function(screen)
-        layout.arrange(screen.index)
+    s:connect_signal("property::workarea", function(screen)
+        layout.arrange(screen)
     end)
-    capi.screen[s]:connect_signal("padding", function (screen)
-        layout.arrange(screen.index)
+    s:connect_signal("padding", function (screen)
+        layout.arrange(screen)
     end)
-end
+end)
 
 capi.client.connect_signal("focus", function(c) layout.arrange(c.screen) end)
 capi.client.connect_signal("list", function()
-                                   for screen = 1, capi.screen.count() do
+                                   for _, screen in pairs(capi.screen.screens()) do
                                        layout.arrange(screen)
                                    end
                                end)

@@ -47,7 +47,7 @@ end
 -- @param screen If the wibox it not attached to a screen, specified on which
 -- screen the position should be set.
 function awfulwibox.set_position(wibox, position, screen)
-    local area = capi.screen[screen].geometry
+    local area = screen.geometry
 
     -- The "length" of a wibox is always chosen to be the optimal size
     -- (non-floating).
@@ -145,7 +145,7 @@ end
 -- screen where to align. Otherwise 1 is assumed.
 function awfulwibox.align(wibox, align, screen)
     local position = awfulwibox.get_position(wibox)
-    local area = capi.screen[screen].workarea
+    local area = screen.workarea
 
     if position == "right" then
         if align == "right" then
@@ -191,7 +191,7 @@ end
 function awfulwibox.stretch(wibox, screen)
     if screen then
         local position = awfulwibox.get_position(wibox)
-        local area = capi.screen[screen].workarea
+        local area = screen.workarea
         if position == "right" or position == "left" then
             wibox.height = area.height - (2 * wibox.border_width)
             wibox.y = area.y
@@ -232,7 +232,7 @@ function awfulwibox.new(arg)
             if arg.screen then
                 local hp = tostring(arg.height):match("(%d+)%%")
                 if hp then
-                    arg.height = capi.screen[arg.screen].geometry.height * hp / 100
+                    arg.height = arg.screen.geometry.height * hp / 100
                 end
             end
         end
@@ -243,7 +243,7 @@ function awfulwibox.new(arg)
             if arg.screen then
                 local wp = tostring(arg.width):match("(%d+)%%")
                 if wp then
-                    arg.width = capi.screen[arg.screen].geometry.width * wp / 100
+                    arg.width = arg.screen.geometry.width * wp / 100
                 end
             end
         end
