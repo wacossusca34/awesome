@@ -4,7 +4,7 @@
 module("mouse")
 
 --- Mouse library.
--- @field screen Mouse screen number.
+-- @field screen Mouse screen.
 -- @class table
 -- @name mouse
 

@@ -101,7 +101,6 @@ luaA_mouse_index(lua_State *L)
 {
     const char *attr = luaL_checkstring(L, 2);
     int16_t mouse_x, mouse_y;
-    screen_t *screen;
 
     /* attr is not "screen"?! */
     if (A_STRNEQ(attr, "screen"))
@@ -112,15 +111,14 @@ luaA_mouse_index(lua_State *L)
         /* Nothing ever handles mouse.screen being nil. Lying is better than
          * having lots of lua errors in this case.
          */
-        if (globalconf.focus.client)
-            lua_pushnumber(L, screen_get_index(globalconf.focus.client->screen));
+        if (globalconf.focus.client && globalconf.focus.client->screen)
+            luaA_object_push(L, globalconf.focus.client->screen);
         else
-            lua_pushnumber(L, 1);
+            luaA_object_push(L, globalconf.screens.tab[0]);
         return 1;
     }
 
-    screen = screen_getbycoord(mouse_x, mouse_y);
-    lua_pushnumber(L, screen_get_index(screen));
+    luaA_object_push(L, screen_getbycoord(mouse_x, mouse_y));
     return 1;
 }
 

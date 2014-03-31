@@ -418,21 +418,6 @@ screen_client_moveto(client_t *c, screen_t *new_screen, bool doresize)
         client_focus(c);
 }
 
-/** Get a screen's index. */
-int
-screen_get_index(screen_t *s)
-{
-    int res = 0;
-    foreach(screen, globalconf.screens)
-    {
-        res++;
-        if (*screen == s)
-            return res;
-    }
-
-    return 0;
-}
-
 /** Screen module.
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
@@ -454,13 +439,6 @@ luaA_screen_module_index(lua_State *L)
 }
 
 LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, luaA_pusharea)
-
-static int
-luaA_screen_get_index(lua_State *L, screen_t *s)
-{
-    lua_pushinteger(L, screen_get_index(s));
-    return 1;
-}
 
 static int
 luaA_screen_get_outputs(lua_State *L, screen_t *s)
@@ -530,10 +508,6 @@ screen_class_setup(lua_State *L)
     luaA_class_add_property(&screen_class, "geometry",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_geometry,
-                            NULL);
-    luaA_class_add_property(&screen_class, "index",
-                            NULL,
-                            (lua_class_propfunc_t) luaA_screen_get_index,
                             NULL);
     luaA_class_add_property(&screen_class, "outputs",
                             NULL,
