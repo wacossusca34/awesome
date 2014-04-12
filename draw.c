@@ -188,27 +188,6 @@ draw_surface_from_pixbuf(GdkPixbuf *buf)
     return surface;
 }
 
-/** Duplicate the specified image surface.
- * \param surface The surface to copy
- * \return A pointer to a new cairo image surface.
- */
-cairo_surface_t *
-draw_dup_image_surface(cairo_surface_t *surface)
-{
-    cairo_surface_t *res = cairo_image_surface_create(
-            cairo_image_surface_get_format(surface),
-            cairo_image_surface_get_width(surface),
-            cairo_image_surface_get_height(surface));
-
-    cairo_t *cr = cairo_create(res);
-    cairo_set_source_surface(cr, surface, 0, 0);
-    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-    cairo_paint(cr);
-    cairo_destroy(cr);
-
-    return res;
-}
-
 /** Load the specified path into a cairo surface
  * \param L Lua state
  * \param path file to load
