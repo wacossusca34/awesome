@@ -14,7 +14,6 @@ module("client")
 -- @field role The window role, if available.
 -- @field machine The machine client is running on.
 -- @field icon_name The client name when iconified.
--- @field icon The client icon.
 -- @field screen Client screen.
 -- @field hidden Define if the client must be hidden, i.e. never mapped,
 -- invisible in taskbar.
@@ -122,6 +121,12 @@ module("client")
 -- @param name The name of the X11 property
 -- @name get_xproperty
 -- @class function
+
+--- Get or set icons on a client
+-- @param arg Nil for querying the number of icons, a number for getting the
+--            i-th icon or a table containing cairo surfaces as light userdata
+--            for setting icons.
+-- @return The number of icons, an icon as light userdata or nothing
 
 --- Add a signal.
 -- @param name A signal name.

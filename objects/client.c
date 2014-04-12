@@ -1290,6 +1290,7 @@ client_set_icons(client_t *c, cairo_surface_array_t array)
     c->icons = array;
 
     luaA_object_push(globalconf.L, c);
+    luaA_object_emit_signal(globalconf.L, -1, "property::icons", 0);
     luaA_object_emit_signal(globalconf.L, -1, "property::icon", 0);
     lua_pop(globalconf.L, 1);
 }
@@ -1730,6 +1731,7 @@ luaA_client_set_icon(lua_State *L, client_t *c)
     cairo_surface_array_t array;
     cairo_surface_array_init(&array);
 
+    luaA_deprecate(L, "icons");
     if(lua_islightuserdata(L, -1))
     {
         cairo_surface_t *surf = (cairo_surface_t *)lua_touserdata(L, -1);
@@ -1865,6 +1867,7 @@ luaA_client_get_screen(lua_State *L, client_t *c)
 static int
 luaA_client_get_icon(lua_State *L, client_t *c)
 {
+    luaA_deprecate(L, "icons");
     if(c->icons.len == 0)
         return 0;
 
@@ -2138,6 +2141,45 @@ luaA_client_keys(lua_State *L)
     return luaA_key_array_get(L, 1, keys);
 }
 
+static int
+luaA_client_icons(lua_State *L)
+{
+    client_t *c = luaA_checkudata(L, 1, &client_class);
+
+    if(lua_isnoneornil(L, 2))
+    {
+        lua_pushnumber(L, c->icons.len);
+        return 1;
+    } else if(lua_isnumber(L, 2))
+    {
+        /* Return the n-th icon to lua */
+        int idx = lua_tointeger(L, 2);
+        if(idx >= 1 && idx <= c->icons.len)
+            lua_pushlightuserdata(L, cairo_surface_reference(c->icons.tab[idx-1]));
+        else
+            lua_pushnil(L);
+        return 1;
+    } else {
+        cairo_surface_array_t array;
+        cairo_surface_array_init(&array);
+        int len = luaA_rawlen(L, 2);
+
+        luaA_checktable(L, 2);
+        for(int i = 1; i <= len; i++)
+        {
+            lua_rawgeti(L, 2, i);
+            if (!lua_islightuserdata(L, 3))
+            {
+                cairo_surface_array_wipe(&array);
+                luaA_typerror(L, 3, "cairo surface as light userdata");
+            }
+            cairo_surface_array_push(&array, lua_touserdata(L, 3));
+        }
+        client_set_icons(c, array);
+        return 0;
+    }
+}
+
 /* Client module.
  * \param L The Lua VM state.
  * \return The number of pushed elements.
@@ -2206,6 +2248,7 @@ client_class_setup(lua_State *L)
         { "titlebar_right", luaA_client_titlebar_right },
         { "titlebar_bottom", luaA_client_titlebar_bottom },
         { "titlebar_left", luaA_client_titlebar_left },
+        { "icons", luaA_client_icons },
         { NULL, NULL }
     };
 
@@ -2373,6 +2416,7 @@ client_class_setup(lua_State *L)
     signal_add(&client_class.signals, "property::height");
     signal_add(&client_class.signals, "property::hidden");
     signal_add(&client_class.signals, "property::icon");
+    signal_add(&client_class.signals, "property::icons");
     signal_add(&client_class.signals, "property::icon_name");
     signal_add(&client_class.signals, "property::instance");
     signal_add(&client_class.signals, "property::keys");
