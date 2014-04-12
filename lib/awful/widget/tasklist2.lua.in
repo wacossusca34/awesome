@@ -1,0 +1,309 @@
+---------------------------------------------------------------------------
+-- @author Uli Schlachter &lt;psychon@znc.in&gt;
+-- @copyright 2014 Uli Schlachter
+-- @release @AWESOME_VERSION@
+---------------------------------------------------------------------------
+
+-- Grab environment we need
+------------------------------ TODO: How much of this is really needed?
+------------------------------ TODO: What is missing?
+local capi = { screen = screen,
+               client = client }
+local ipairs = ipairs
+local setmetatable = setmetatable
+local table = table
+local common = require("awful.widget.common")
+local beautiful = require("beautiful")
+local client = require("awful.client")
+local util = require("awful.util")
+local tag = require("awful.tag")
+local flex = require("wibox.layout.flex")
+local surface = require("gears.surface")
+local imagebox = require("wibox.widget.imagebox")
+local textbox = require("wibox.widget.textbox")
+local background = require("wibox.widget.background")
+local margin = require("wibox.layout.margin")
+local fixed = require("wibox.layout.fixed")
+
+--- Tasklist widget module for awful
+-- awful.widget.tasklist
+local tasklist = { mt = {} }
+
+-- Public structures
+tasklist.filter = {}
+tasklist.widgets = {}
+
+function tasklist.widgets.name(c, args)
+    if not args then args = {} end
+    local theme = beautiful.get()
+    local font = args.font or theme.tasklist_font or theme.font or ""
+    -- symbol to use to indicate certain client properties
+    local sticky = args.sticky or theme.tasklist_sticky or "▪"
+    local ontop = args.ontop or theme.tasklist_ontop or '⌃'
+    local floating = args.floating or theme.tasklist_floating or '✈'
+    local maximized_horizontal = args.maximized_horizontal or theme.tasklist_maximized_horizontal or '⬌'
+    local maximized_vertical = args.maximized_vertical or theme.tasklist_maximized_vertical or '⬍'
+
+    local tb = textbox()
+    tb:set_font(font)
+
+    local update = function()
+        local name = ""
+        if c.sticky then name = name .. sticky end
+        if c.ontop then name = name .. ontop end
+        if client.floating.get(c) then name = name .. floating end
+        if c.maximized_horizontal then name = name .. maximized_horizontal end
+        if c.maximized_vertical then name = name .. maximized_vertical end
+
+        if c.minimized then
+            name = name .. (util.escape(c.icon_name) or util.escape(c.name) or util.escape("<untitled>"))
+        else
+            name = name .. (util.escape(c.name) or util.escape("<untitled>"))
+        end
+        tb:set_text(name)
+    end
+
+    -- Update the widget when needed
+    c:connect_signal("property::floating", update)
+    c:connect_signal("property::icon_name", update)
+    c:connect_signal("property::maximized_horizontal", update)
+    c:connect_signal("property::maximized_vertical", update)
+    c:connect_signal("property::minimized", update)
+    c:connect_signal("property::name", update)
+    c:connect_signal("property::ontop", update)
+    c:connect_signal("property::sticky", update)
+    update()
+    return tb
+end
+
+function tasklist.widgets.icon(c, args)
+    if not args then args = {} end
+    local theme = beautiful.get()
+    local tasklist_disable_icon = args.tasklist_disable_icon or theme.tasklist_disable_icon or false
+
+    local ib = imagebox()
+
+    local update = function()
+        -- Get the tag's icon
+        if not tasklist_disable_icon then
+            ib:set_image(surface.load(c.icon))
+        end
+    end
+
+    -- Update the widget when needed
+    c:connect_signal("property::icon", update)
+    update()
+    return ib
+end
+
+function tasklist.widgets.base(c, args, name, icon)
+    if not args then args = {} end
+    local theme = beautiful.get()
+    -- Get all settings
+    local fg_normal = args.fg_normal or theme.tasklist_fg_normal or theme.fg_normal or "#ffffff"
+    local bg_normal = args.bg_normal or theme.tasklist_bg_normal or theme.bg_normal or "#000000"
+    local fg_focus = args.fg_focus or theme.tasklist_fg_focus or theme.fg_focus
+    local bg_focus = args.bg_focus or theme.tasklist_bg_focus or theme.bg_focus
+    local fg_urgent = args.fg_urgent or theme.tasklist_fg_urgent or theme.fg_urgent
+    local bg_urgent = args.bg_urgent or theme.tasklist_bg_urgent or theme.bg_urgent
+    local fg_minimize = args.fg_minimize or theme.tasklist_fg_minimize or theme.fg_minimize
+    local bg_minimize = args.bg_minimize or theme.tasklist_bg_minimize or theme.bg_minimize
+    local bg_image_normal = args.bg_image_normal or theme.bg_image_normal
+    local bg_image_focus = args.bg_image_focus or theme.bg_image_focus
+    local bg_image_urgent = args.bg_image_urgent or theme.bg_image_urgent
+    local bg_image_minimize = args.bg_image_minimize or theme.bg_image_minimize
+
+    -- Create the widgets
+    local tb = (name and name or tasklist.widgets.name)(c, args)
+    local ib = (icon and icon or tasklist.widgets.icon)(c, args)
+    local bgb = background()
+    local m = margin(tb, 4, 4)
+    local l = fixed.horizontal()
+
+    -- All of this is added in a fixed widget
+    l:fill_space(true)
+    l:add(ib)
+    l:add(m)
+
+    -- And all of this gets a background
+    bgb:set_widget(l)
+
+    local update = function()
+        local bg_image = nil
+        local fg_color = nil
+        local bg_color = nil
+
+        if capi.client.focus == c then
+            fg_color = fg_focus or fg_normal
+            bg_color = bg_focus
+            bg_image = bg_image_focus
+        elseif c.urgent and fg_urgent then
+            fg_color = fg_urgent
+            bg_color = bg_urgent
+            bg_image = bg_image_urgent
+        elseif c.minimized and fg_minimize and bg_minimize then
+            bg_color = bg_minimize
+            fg_color = fg_minimize
+            bg_image = bg_image_minimize
+        else
+            fg_color = fg_normal
+            bg_color = bg_normal
+            bg_image = bg_image_normal
+        end
+        bgb:set_bg(bg_color)
+        bgb:set_fg(fg_color)
+        bgb:set_bgimage(bg_image)
+    end
+
+    -- Update the widget when needed
+    c:connect_signal("focus", update)
+    c:connect_signal("property::minimized", update)
+    c:connect_signal("property::urgent", update)
+    c:connect_signal("unfocus", update)
+
+    update()
+    return bgb
+end
+
+--- Create a new tasklist widget. The last two arguments (update_function
+-- and base_widget) serve to customize the layout of the tasklist (eg. to
+-- make it vertical). For that, you will need to copy the
+-- awful.widget.common.list_update function, make your changes to it
+-- and pass it as update_function here. Also change the base_widget if the
+-- default is not what you want.
+-- @param screen The screen to draw tasklist for.
+-- @param filter Filter function to define what clients will be listed.
+-- @param buttons A table with buttons binding to set.
+-- @param style The style overrides default theme.
+-- @param update_function Optional function to create a tag widget on each
+--        update. @see awful.widget.common.
+-- @param base_widget Optional container widget for tag widgets. Default
+--        is wibox.layout.flex.horizontal().
+-- bg_normal The background color for unfocused client.
+-- fg_normal The foreground color for unfocused client.
+-- bg_focus The background color for focused client.
+-- fg_focus The foreground color for focused client.
+-- bg_urgent The background color for urgent clients.
+-- fg_urgent The foreground color for urgent clients.
+-- bg_minimize The background color for minimized clients.
+-- fg_minimize The foreground color for minimized clients.
+-- floating Symbol to use for floating clients.
+-- ontop Symbol to use for ontop clients.
+-- maximized_horizontal Symbol to use for clients that have been horizontally maximized.
+-- maximized_vertical Symbol to use for clients that have been vertically maximized.
+-- font The font.
+--
+-- ----------------TODO: Update docs
+function tasklist.new(screen, filter, buttons, widget_factory, base_widget)
+    local filter = filter or function() return true end
+    local widget_factory = widget_factory or tasklist.widgets.base
+    local w = base_widget or flex.horizontal()
+    local data = setmetatable({}, { __mode = 'kv' })
+    w.tasklist_data = data
+
+    local update = function()
+        common.update_list(w, screen, buttons, filter, widget_factory, data, capi.client.get())
+    end
+    capi.client.connect_signal("list", update)
+    capi.client.connect_signal("property::hidden", update)
+    capi.client.connect_signal("property::screen", update)
+    capi.client.connect_signal("property::skip_taskbar", update)
+    capi.client.connect_signal("property::sticky", update)
+    capi.client.connect_signal("tagged", update)
+    capi.client.connect_signal("untagged", update)
+    tag.attached_connect_signal(screen, "property::selected", update)
+    update()
+    w.getclient = tasklist.getclient
+    return w
+end
+
+-- TODO docs
+function tasklist:getclient(widget)
+    return self.taklist_data[widget]
+end
+
+--- Filtering function to include all clients.
+-- @param c The client.
+-- @param screen The screen we are drawing on.
+-- @return true if the client should be included
+function tasklist.filter.allscreen(c, screen)
+    return not (c.skip_taskbar or c.hidden
+        or c.type == "splash" or c.type == "dock" or c.type == "desktop")
+end
+
+--- Filtering function to include the clients from all tags on the screen.
+-- @param c The client.
+-- @param screen The screen we are drawing on.
+-- @return true if c is on screen, false otherwise
+function tasklist.filter.alltags(c, screen)
+    -- Only print client on the same screen as this widget
+    return tasklist.filter.allscreen(c, screen) and c.screen == screen
+end
+
+--- Filtering function to include only the clients from currently selected tags.
+-- @param c The client.
+-- @param screen The screen we are drawing on.
+-- @return true if c is in a selected tag on screen, false otherwise
+function tasklist.filter.currenttags(c, screen)
+    if not tasklist.filter.allscreen(c, screen) then return false end
+    -- Only print client on the same screen as this widget
+    if c.screen ~= screen then return false end
+    -- Include sticky client too
+    if c.sticky then return true end
+    local tags = tag.gettags(screen)
+    for k, t in ipairs(tags) do
+        if t.selected then
+            local ctags = c:tags()
+            for _, v in ipairs(ctags) do
+                if v == t then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+--- Filtering function to include only the minimized clients from currently selected tags.
+-- @param c The client.
+-- @param screen The screen we are drawing on.
+-- @return true if c is in a selected tag on screen and is minimized, false otherwise
+function tasklist.filter.minimizedcurrenttags(c, screen)
+    if not tasklist.filter.allscreen(c, screen) then return false end
+    -- Only print client on the same screen as this widget
+    if c.screen ~= screen then return false end
+    -- Check client is minimized
+    if not c.minimized then return false end
+    -- Include sticky client
+    if c.sticky then return true end
+    local tags = tag.gettags(screen)
+    for k, t in ipairs(tags) do
+        -- Select only minimized clients
+        if t.selected then
+            local ctags = c:tags()
+            for _, v in ipairs(ctags) do
+                if v == t then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+--- Filtering function to include only the currently focused client.
+-- @param c The client.
+-- @param screen The screen we are drawing on.
+-- @return true if c is focused on screen, false otherwise
+function tasklist.filter.focused(c, screen)
+    -- Only print client on the same screen as this widget
+    return tasklist.filter.allscreen(c, screen) and c.screen == screen and capi.client.focus == c
+end
+
+function tasklist.mt:__call(...)
+    return tasklist.new(...)
+end
+
+return setmetatable(tasklist, tasklist.mt)
+
+-- vim: filetype=lua:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

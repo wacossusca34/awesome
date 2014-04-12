@@ -89,6 +89,22 @@ function common.list_update(w, buttons, label, data, objects)
    end
 end
 
+function common.update_list(w, s, buttons, filter, widget_factory, data, objects)
+    w:reset()
+    for k, t in ipairs(objects) do
+        if filter(t, s) then
+            local widget = data[t]
+            if not widget then
+                widget = widget_factory(t)
+                widget:buttons(common.create_buttons(buttons, t))
+                data[t] = widget
+                data[widget] = t
+            end
+            w:add(widget)
+        end
+    end
+end
+
 return common
 
 -- vim: filetype=lua:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
