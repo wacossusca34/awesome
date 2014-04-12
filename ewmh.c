@@ -615,40 +615,67 @@ ewmh_window_icon_get_unchecked(xcb_window_t w)
 }
 
 static cairo_surface_t *
-ewmh_window_icon_from_reply(xcb_get_property_reply_t *r)
+ewmh_window_icon_from_reply_next(uint32_t **data, uint32_t *data_end)
 {
-    uint32_t *data;
-    uint64_t len;
+    uint32_t width, height;
+    uint64_t data_len;
+    uint32_t *icon_data;
 
-    if(!r || r->type != XCB_ATOM_CARDINAL || r->format != 32 || r->length < 2)
-        return 0;
+    if (data_end - *data <= 2)
+        return NULL;
 
-    data = (uint32_t *) xcb_get_property_value(r);
-    if (!data)
-        return 0;
+    width = (*data)[0];
+    height = (*data)[1];
 
     /* Check that the property is as long as it should be, handling integer
      * overflow. <uint32_t> times <another uint32_t casted to uint64_t> always
      * fits into an uint64_t and thus this multiplication cannot overflow.
      */
-    len = data[0] * (uint64_t) data[1];
-    if (!data[0] || !data[1] || len > r->length - 2)
-        return 0;
+    data_len = width * (uint64_t) height;
+    if (width < 1 || height < 1 || data_len > (uint64_t) (data_end - *data) - 2)
+        return NULL;
 
-    return draw_surface_from_data(data[0], data[1], data + 2);
+    icon_data = *data + 2;
+    *data += 2 + data_len;
+    return draw_surface_from_data(width, height, icon_data);
+}
+
+static cairo_surface_array_t
+ewmh_window_icon_from_reply(xcb_get_property_reply_t *r)
+{
+    uint32_t *data, *data_end;
+    cairo_surface_array_t result;
+    cairo_surface_t *s;
+
+    cairo_surface_array_init(&result);
+
+    if(!r || r->type != XCB_ATOM_CARDINAL || r->format != 32)
+        return result;
+
+    data = (uint32_t *) xcb_get_property_value(r);
+    data_end = &data[r->length];
+    if (!data)
+        return result;
+
+    /* Read all icons from the reply into an array */
+    while ((s = ewmh_window_icon_from_reply_next(&data, data_end)) != NULL) {
+        cairo_surface_array_push(&result, s);
+    }
+
+    return result;
 }
 
 /** Get NET_WM_ICON.
  * \param cookie The cookie.
- * \return The number of elements on stack.
+ * \return An array of icons
  */
-cairo_surface_t *
+cairo_surface_array_t
 ewmh_window_icon_get_reply(xcb_get_property_cookie_t cookie)
 {
     xcb_get_property_reply_t *r = xcb_get_property_reply(globalconf.connection, cookie, NULL);
-    cairo_surface_t *surface = ewmh_window_icon_from_reply(r);
+    cairo_surface_array_t result = ewmh_window_icon_from_reply(r);
     p_delete(&r);
-    return surface;
+    return result;
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

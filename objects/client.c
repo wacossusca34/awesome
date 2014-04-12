@@ -48,6 +48,7 @@ client_wipe(client_t *c)
 {
     key_array_wipe(&c->keys);
     xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
+    cairo_surface_array_wipe(&c->icons);
     p_delete(&c->machine);
     p_delete(&c->class);
     p_delete(&c->instance);
@@ -56,8 +57,6 @@ client_wipe(client_t *c)
     p_delete(&c->name);
     p_delete(&c->alt_name);
     p_delete(&c->startup_id);
-    if(c->icon)
-        cairo_surface_destroy(c->icon);
 }
 
 /** Change the clients urgency flag.
@@ -1285,13 +1284,10 @@ luaA_client_isvisible(lua_State *L)
  * \param iidx The image index on the stack.
  */
 void
-client_set_icon(client_t *c, cairo_surface_t *s)
+client_set_icons(client_t *c, cairo_surface_array_t array)
 {
-    if (s)
-        s = draw_dup_image_surface(s);
-    if(c->icon)
-        cairo_surface_destroy(c->icon);
-    c->icon = s;
+    cairo_surface_array_wipe(&c->icons);
+    c->icons = array;
 
     luaA_object_push(globalconf.L, c);
     luaA_object_emit_signal(globalconf.L, -1, "property::icon", 0);
@@ -1731,10 +1727,16 @@ luaA_client_set_maximized_vertical(lua_State *L, client_t *c)
 static int
 luaA_client_set_icon(lua_State *L, client_t *c)
 {
-    cairo_surface_t *surf = NULL;
-    if(!lua_isnil(L, -1))
-        surf = (cairo_surface_t *)lua_touserdata(L, -1);
-    client_set_icon(c, surf);
+    cairo_surface_array_t array;
+    cairo_surface_array_init(&array);
+
+    if(lua_islightuserdata(L, -1))
+    {
+        cairo_surface_t *surf = (cairo_surface_t *)lua_touserdata(L, -1);
+        cairo_surface_array_push(&array, cairo_surface_reference(surf));
+    } else if (!lua_isnil(L, -1))
+        luaA_typerror(L, -1, "cairo surface as light userdata");
+    client_set_icons(c, array);
     return 0;
 }
 
@@ -1863,10 +1865,12 @@ luaA_client_get_screen(lua_State *L, client_t *c)
 static int
 luaA_client_get_icon(lua_State *L, client_t *c)
 {
-    if(!c->icon)
+    if(c->icons.len == 0)
         return 0;
+
     /* lua gets its own reference which it will have to destroy */
-    lua_pushlightuserdata(L, cairo_surface_reference(c->icon));
+    lua_pushlightuserdata(L, cairo_surface_reference(c->icons.tab[0]));
+
     return 1;
 }
 
