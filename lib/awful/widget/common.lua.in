@@ -50,7 +50,7 @@ function common.list_update(w, buttons, label, data, objects)
             bgb = cache.bgb
             m   = cache.m
         else
-            ib = wibox.widget.imagebox()
+            ib = require("wibox.widget.iconbox")()
             tb = wibox.widget.textbox()
             bgb = wibox.widget.background()
             m = wibox.layout.margin(tb, 4, 4)
@@ -84,7 +84,14 @@ function common.list_update(w, buttons, label, data, objects)
             bg_image = bg_image(tb,o,m,objects,i)
         end
         bgb:set_bgimage(bg_image)
-        ib:set_image(icon)
+        if type(icon) == "client" then
+            local c = icon
+            icon = {}
+            for idx = 1, c:icons() do
+                icon[idx] = c:icons(idx)
+            end
+        end
+        ib:set_images(icon)
         w:add(bgb)
    end
 end

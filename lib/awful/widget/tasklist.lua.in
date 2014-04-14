@@ -88,7 +88,7 @@ local function tasklist_label(c, args)
         bg_image = bg_image_normal
     end
     text = text .. "</span>"
-    return text, bg, bg_image, not tasklist_disable_icon and c.icon or nil
+    return text, bg, bg_image, not tasklist_disable_icon and c or nil
 end
 
 local function tasklist_update(s, w, buttons, filter, data, style, update_function)
