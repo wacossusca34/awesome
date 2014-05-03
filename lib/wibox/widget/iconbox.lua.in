@@ -1,0 +1,131 @@
+---------------------------------------------------------------------------
+-- @author Uli Schlachter
+-- @copyright 2014 Uli Schlachter
+-- @release @AWESOME_VERSION@
+---------------------------------------------------------------------------
+
+local base = require("wibox.widget.base")
+local surface = require("gears.surface")
+local debug = require("gears.debug")
+local setmetatable = setmetatable
+local pairs = pairs   --- TODO Needed?
+local type = type
+local pcall = pcall
+local table = table
+local math = math
+
+-- wibox.widget.iconbox
+local iconbox = { mt = {} }
+
+--- Draw an iconbox with the given cairo context in the given geometry.
+function iconbox:draw(wibox, cr, width, height)
+    if not self._images or width <= 0 or height <= 0 then return end
+
+    -- Pick the image: Choose the one which matches the requested size closest
+    local best, offset, aspect = nil, math.huge, 1
+    for img, size in pairs(self._images) do
+        local w, h = size[1], size[2]
+        local dist_sq = (w - width)^2 + (h - height)^2
+        if dist_sq < offset then
+            best = img
+            offset = dist_sq
+            aspect = math.min(width / w, height / h)
+        end
+    end
+    debug.assert(best ~= nil, "Failed to chose an image out of a non-empty set?!")
+
+    -- Draw the image
+    cr:scale(aspect, aspect)
+    cr:set_source_surface(best, 0, 0)
+    cr:paint()
+end
+
+--- Fit the iconbox into the given geometry
+function iconbox:fit(width, height)
+    -- Without an image, we take no space
+    if not self._images or width <= 0 or height <= 0 then
+        return 0, 0
+    end
+
+    -- With images, we respect their size aspect
+    local aspect = math.max(self._min_aspect, math.max(self._min_aspect, width / height))
+    if height * aspect <= width then
+        return height, height * aspect
+    else
+        return width / aspect, width
+    end
+end
+
+--- Set an iconbox' images
+-- @param images A table containing strings or cairo image surfaces. A string is
+--               interpreted as the path to a png image file.
+function iconbox:set_images(images)
+    local _images = {}
+    local empty = true
+    local min_aspect = math.huge
+    local max_aspect = 0
+
+    if type(images) ~= "table" then
+        images = { images }
+    end
+    for _, img in ipairs(images) do
+        if type(img) == "string" then
+            local success, result = pcall(surface.load, img)
+            if not success then
+                return false
+            end
+            img = result
+        else
+            img = surface.load(img)
+        end
+
+        -- Add the image
+        local w, h = surface.get_size(img)
+        if w <= 0 or h <= 0 then
+            return false
+        end
+
+        _images[img] = { w, h }
+        empty = false
+
+        -- Update our aspects
+        min_aspect = math.min(min_aspect, w / h)
+        max_aspect = math.max(max_aspect, w / h)
+    end
+
+    if empty then
+        self._images = nil
+        self._min_aspect = nil
+        self._max_aspect = nil
+    else
+        self._images = _images
+        self._min_aspect = min_aspect
+        self._max_aspect = max_aspect
+    end
+    self:emit_signal("widget::updated")
+    return true
+end
+
+--- Returns a new iconbox
+-- @param images the images to display, may be nil
+function iconbox.new(images)
+    local ret = base.make_widget()
+
+    for k, v in pairs(iconbox) do
+        if type(v) == "function" then
+            ret[k] = v
+        end
+    end
+
+    ret:set_images(images)
+
+    return ret
+end
+
+function iconbox.mt:__call(...)
+    return iconbox.new(...)
+end
+
+return setmetatable(iconbox, iconbox.mt)
+
+-- vim: filetype=lua:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
