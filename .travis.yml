@@ -47,7 +47,7 @@ install:
 
   # lgi.
   - sudo apt-get install -y gir1.2-pango-1.0 libgirepository1.0-dev
-  - travis_retry sudo luarocks install lgi $LGIVER
+  - travis_retry sudo luarocks install ./lgi-git-1.rockspec
 
   # Install busted for "make check".
   - travis_retry sudo luarocks install busted
