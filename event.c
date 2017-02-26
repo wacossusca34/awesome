@@ -396,7 +396,12 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
         }
 
         c->got_configure_request = true;
-        client_resize(c, geometry, false);
+        
+        /* Request the changes to be applied */
+        luaA_object_push(L, c);
+        lua_pushstring(L, "ewmh");
+        luaA_object_emit_signal(L, abs_cidx, "request::geometry", 1);
+        lua_pop(L, 1);
     }
     else if (xembed_getbywin(&globalconf.embedded, ev->window))
     {
